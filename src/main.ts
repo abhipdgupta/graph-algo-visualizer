@@ -1,3 +1,4 @@
+import { astarGenerator, bfsGenerator, dfsGenerator, dijkstraGenerator } from "./path-finding-alog.js";
 import type {
   CanvasMetric,
   CanvasState,
@@ -9,7 +10,6 @@ import type {
   Path,
 } from "./types";
 
-// --- UI Elements ---
 const canvasContainer = document.getElementById(
   "canvas-container"
 ) as HTMLDivElement;
@@ -41,7 +41,6 @@ const showMessage = (msg: string) => {
   messageDiv.style.display = "block";
 };
 
-// --- Canvas Setup ---
 canvasContainer.style.width = "80vw";
 canvasContainer.style.height = "80vh";
 canvasContainer.style.border = "2px solid grey";
@@ -60,7 +59,6 @@ const cellMetrics = {
 };
 const ctx = canvas.getContext("2d");
 
-// --- Global State and Control Variables ---
 const canvasMetric: CanvasMetric = {
   width: canvas.width,
   height: canvas.height,
@@ -73,17 +71,14 @@ const canvasState: CanvasState = {
   path: null,
 };
 
-/** Controls the speed of the animation in milliseconds per step. */
 const speedOfSearch = 15;
 
-/** Holds the generator function for the current algorithm visualization. */
 let visualizationGenerator: Generator<
   { cell: Cell; found: boolean },
   Path | null,
   unknown
 > | null = null;
 
-// --- Grid and Cell Management ---
 const createGrid = (rows: number, cols: number): Grid => {
   const cells: Cell[] = [];
   for (let r = 0; r < rows; r++) {
@@ -91,7 +86,7 @@ const createGrid = (rows: number, cols: number): Grid => {
       const cell: Cell = {
         id: `w${c}-h${r}`,
         pos: { row: r, col: c },
-        color: `rgba(255, 255, 255, 1)`, // default white,
+        color: `rgba(0, 0, 0, 1)`, // default white,
         isWall: false,
       };
       cells.push(cell);
@@ -115,7 +110,6 @@ const getCellByPos = (grid: Grid, pos: CellPos): Cell | undefined => {
   return getCellById(id);
 };
 
-// --- Rendering Functions ---
 const clearCanvas = () => {
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -130,7 +124,7 @@ const renderCell = (cell: Cell) => {
     grid.cellSize.width,
     grid.cellSize.height
   );
-  ctx.strokeStyle = "black";
+  ctx.strokeStyle = "rgba(200, 200, 200, 0.3)";
   ctx.strokeRect(
     cell.pos.col * grid.cellSize.width,
     cell.pos.row * grid.cellSize.height,
@@ -148,147 +142,6 @@ const renderCanvas = () => {
   renderGrid(grid);
 };
 
-type ParentMap = Record<CellId, CellId | null>;
-
-const getNeighbors = (grid: Grid, cell: Cell): Cell[] => {
-  const neighbors: Cell[] = [];
-  const { row, col } = cell.pos;
-
-  // Potential neighbor positions: Up, Down, Left, Right
-  const potentialNeighbors: CellPos[] = [
-    { row: row - 1, col: col }, // Up
-    { row: row + 1, col: col }, // Down
-    { row: row, col: col - 1 }, // Left
-    { row: row, col: col + 1 }, // Right
-  ];
-
-  for (const pos of potentialNeighbors) {
-    if (
-      pos.row >= 0 &&
-      pos.row < grid.rows &&
-      pos.col >= 0 &&
-      pos.col < grid.cols
-    ) {
-      const neighbor = getCellByPos(grid, pos);
-      if (neighbor && !neighbor.isWall) {
-        neighbors.push(neighbor);
-      }
-    }
-  }
-
-  return neighbors;
-};
-
-/**
- * DFS implemented as a generator to yield each visited step for visualization.
- */
-function* dfsGenerator(
-  grid: Grid,
-  startPos: CellPos,
-  endPos: CellPos
-): Generator<{ cell: Cell; found: boolean }, Path | null, unknown> {
-  const stack: Cell[] = [];
-  const visited: Set<CellId> = new Set();
-  const parentMap: ParentMap = {};
-
-  const startCell = getCellByPos(grid, startPos);
-  const endCell = getCellByPos(grid, endPos);
-
-  if (!startCell || !endCell) return null;
-
-  stack.push(startCell);
-  visited.add(startCell.id);
-  parentMap[startCell.id] = null;
-
-  while (stack.length > 0) {
-    const currentCell = stack.pop() as Cell;
-
-    yield { cell: currentCell, found: currentCell.id === endCell.id };
-
-    if (currentCell.id === endCell.id) {
-      // Path Reconstruction
-      const path: Path = [];
-      let currentId: CellId | null = endCell.id;
-
-      while (currentId !== null) {
-        path.unshift(currentId);
-        currentId = parentMap[currentId] || null;
-      }
-      return path;
-    }
-
-    if (currentCell.id !== startCell.id && currentCell.id !== endCell.id) {
-      currentCell.color = `rgba(0, 0, 255, 0.6)`; 
-    }
-
-    const neighbors = getNeighbors(grid, currentCell);
-
-    for (const neighbor of neighbors) {
-      if (!visited.has(neighbor.id)) {
-        visited.add(neighbor.id);
-        parentMap[neighbor.id] = currentCell.id;
-        stack.push(neighbor);
-      }
-    }
-  }
-
-  return null;
-}
-function* bfsGenerator(
-  grid: Grid,
-  startPos: CellPos,
-  endPos: CellPos
-): Generator<{ cell: Cell; found: boolean }, Path | null, unknown> {
-  // Use a Queue for BFS (First-In, First-Out)
-  const queue: Cell[] = [];
-  const visited: Set<CellId> = new Set();
-  const parentMap: ParentMap = {};
-
-  const startCell = getCellByPos(grid, startPos);
-  const endCell = getCellByPos(grid, endPos);
-
-  if (!startCell || !endCell) return null;
-
-  queue.push(startCell);
-  visited.add(startCell.id);
-  parentMap[startCell.id] = null;
-
-  while (queue.length > 0) {
-    const currentCell = queue.shift() as Cell;
-
-    yield { cell: currentCell, found: currentCell.id === endCell.id };
-
-    if (currentCell.id === endCell.id) {
-      // Path Reconstruction
-      const path: Path = [];
-      let currentId: CellId | null = endCell.id;
-
-      while (currentId !== null) {
-        path.unshift(currentId);
-        // Trace back using parent map
-        currentId = parentMap[currentId] || null;
-      }
-      return path;
-    }
-
-    if (currentCell.id !== startCell.id && currentCell.id !== endCell.id) {
-      currentCell.color = `rgba(0, 0, 255, 0.6)`;
-    }
-
-    const neighbors = getNeighbors(grid, currentCell);
-
-    for (const neighbor of neighbors) {
-      if (!visited.has(neighbor.id)) {
-        visited.add(neighbor.id);
-        parentMap[neighbor.id] = currentCell.id;
-        // Enqueue the neighbor
-        queue.push(neighbor);
-      }
-    }
-  }
-
-  return null;
-}
 
 const animatePathfinding = () => {
   if (!visualizationGenerator) {
@@ -342,7 +195,7 @@ clearMazeButton.onclick = () => {
 
     if (!isMarker) {
       cell.isWall = false;
-      cell.color = `rgba(255, 255, 255, 1)`;
+      cell.color = `rgba(0, 0, 0, 1)`;// default black,
     }
   });
   canvasState.state = "idle";
@@ -366,7 +219,30 @@ startAlgorithmButton.onclick = () => {
     showMessage("Please select an algorithm to run.");
     return;
   }
-
+  //reset canvas colors except markers and walls
+  grid.cells.forEach((cell) => {
+    let isMarker = false;
+    if (
+      canvasState.markerPos &&
+      canvasState.markerPos.start &&
+      cell.pos.row === canvasState.markerPos.start.row &&
+      cell.pos.col === canvasState.markerPos.start.col
+    ) {
+      isMarker = true;
+    }
+    if (
+      canvasState.markerPos &&
+      canvasState.markerPos.end &&
+      cell.pos.row === canvasState.markerPos.end.row &&
+      cell.pos.col === canvasState.markerPos.end.col
+    ) {
+      isMarker = true;
+    }
+    if (!isMarker && !cell.isWall) {
+      cell.color =  `rgba(0, 0, 0, 1)`;// default black,
+    }
+  });
+  renderCanvas();
   if (canvasState.algorithmName === "dfs") {
     const { start, end } = canvasState.markerPos;
     visualizationGenerator = dfsGenerator(grid, start!, end!);
@@ -379,12 +255,26 @@ startAlgorithmButton.onclick = () => {
     canvasState.state = "animating_path";
     showMessage(`Running ${canvasState.algorithmName.toUpperCase()}...`);
     animatePathfinding();
+  } else if (canvasState.algorithmName === "dijkstra") {
+    const { start, end } = canvasState.markerPos;
+    visualizationGenerator = dijkstraGenerator(grid, start!, end!);
+    canvasState.state = "animating_path";
+    showMessage(`Running ${canvasState.algorithmName.toUpperCase()}...`);
+    animatePathfinding();
+  } else if (canvasState.algorithmName === "a-star") {
+    const { start, end } = canvasState.markerPos;
+    visualizationGenerator = astarGenerator(grid, start!, end!);
+    canvasState.state = "animating_path";
+    showMessage(`Running ${canvasState.algorithmName.toUpperCase()}...`);
+    animatePathfinding();
+  } else {
+    showMessage("Selected algorithm is not implemented yet.");
   }
 };
 resetButton.onclick = () => {
   grid.cells.forEach((cell) => {
     cell.isWall = false;
-    cell.color = `rgba(255, 255, 255, 1)`;
+    cell.color =  `rgba(0, 0, 0, 1)`;// default black,
   });
   canvasState.state = "idle";
   canvasState.markerPos = undefined;
@@ -439,7 +329,7 @@ const registerCanvasEventHandlers = () => {
       if (!isCellAMarker) {
         canvasState.isActuallyDrawingMaze = true;
         cell.isWall = true;
-        cell.color = `rgba(0, 0, 0, 1)`;
+        cell.color = `rgba(255, 255, 255, 1)`; // white for wall
       }
     }
   });
@@ -471,7 +361,7 @@ const registerCanvasEventHandlers = () => {
       !isCellAMarker
     ) {
       cell.isWall = true;
-      cell.color = `rgba(0, 0, 0, 1)`; // black for wall
+      cell.color = `rgba(255, 255, 255, 1)`; // white for wall
     }
   });
 
@@ -508,10 +398,10 @@ const registerCanvasEventHandlers = () => {
         const endCell = getCellByPos(grid, canvasState.markerPos!.end!);
 
         if (startCell) {
-          startCell.color = `rgba(255, 255, 255, 1)`;
+          startCell.color = `rgba(0, 0, 0, 1)`;
         }
         if (endCell) {
-          endCell.color = `rgba(255, 255, 255, 1)`;
+          endCell.color = `rgba(0, 0, 0, 1)`;
         }
         canvasState.markerPos = undefined;
         showMessage("Markers reset! You can now set new markers.");
@@ -527,7 +417,7 @@ const updateCanvasState = () => {
         const cellId = canvasState.path[i];
         const cell = getCellById(cellId!);
         if (cell) {
-          cell.color = `rgba(255, 255, 0, 1)`;
+          cell.color = `rgba(255, 255, 0, 0.6)`;
         }
       }
       showMessage(`Path found! The final path is highlighted in yellow.`);
@@ -569,3 +459,4 @@ const run = () => {
 };
 
 run();
+    

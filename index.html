@@ -4,29 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Graph Algo Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body class="body">
-    <h1><i>Graph Algo Visualizer</i></h1>
-
-    <h1 id="message"></h1>
-
-    <div id="canvas-container"></div>
-
-    <div id="controls">
-      <button id="draw-maze-btn">Draw Maze</button>
-      <button id="choose-marker-btn">Choose Marker</button>
-      <button id="clear-maze-btn">Clear Maze</button>
-      <select id="algorithm-select">
-        <option value="dijkstra">Dijkstra's Algorithm</option>
-        <option value="a-star">A* Search</option>
-        <option value="bfs">Breadth-First Search</option>
-        <option value="dfs">Depth-First Search</option>
-      </select>
-      <button id="start-algo-btn">Start Algorithm</button>
-      <button id="reset-btn">Reset</button>
+  <body>
+    <div id="main-container">
+        <h1>Graph Algorithm Visualizer</h1>
+        <p id="message"></p>
+        <div id="canvas-container"></div>
+        <div id="controls">
+            <button id="draw-maze-btn">Draw Maze</button>
+            <button id="choose-marker-btn">Choose Marker</button>
+            <button id="clear-maze-btn">Clear Maze</button>
+            <select id="algorithm-select">
+                <option value="" disabled selected>Select Algorithm</option>
+                <option value="dijkstra">Dijkstra's Algorithm</option>
+                <option value="a-star">A* Search</option>
+                <option value="bfs">Breadth-First Search</option>
+                <option value="dfs">Depth-First Search</option>
+            </select>
+            <button id="start-algo-btn">Start Algorithm</button>
+            <button id="reset-btn">Reset</button>
+        </div>
     </div>
-
     <script type="module" src="dist/main.js"></script>
   </body>
 </html>
